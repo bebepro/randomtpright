@@ -1,0 +1,90 @@
+-- Services
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")  -- To track the player's movement every frame
+
+-- Constants
+local TELEPORT_RANGE = Vector3.new(20, 0, 0)  -- Adjust these values based on your game world size
+
+-- Variables
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()  -- Handle the character when the script starts
+local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+local originalPosition = humanoidRootPart.Position  -- Store the original position of the player
+local isTeleporting = false
+local button = script.Parent -- Assuming the button is the parent of the script
+
+-- Function to get a random position within the specified range
+local function getRandomPosition(basePosition)
+	local randomOffset = Vector3.new(
+		math.random(-TELEPORT_RANGE.X, TELEPORT_RANGE.X),
+		math.random(-TELEPORT_RANGE.Y, TELEPORT_RANGE.Y),
+		math.random(-TELEPORT_RANGE.Z, TELEPORT_RANGE.Z)
+	)
+	return basePosition + randomOffset
+end
+
+-- Function to teleport the player to a random position
+local function teleportPlayer()
+	if character and humanoidRootPart then
+		local targetPosition = getRandomPosition(humanoidRootPart.Position)
+
+		-- Teleport the player to the new position
+		local success, error = pcall(function()
+			humanoidRootPart.CFrame = CFrame.new(targetPosition)  -- Teleport the player (moves the HumanoidRootPart)
+		end)
+
+		-- Log any errors
+		if not success then
+			warn("Teleportation failed:", error)
+		end
+	end
+end
+
+-- Function to teleport the player back to their original position
+local function teleportBackToOriginalPosition()
+	if character and humanoidRootPart then
+		local success, error = pcall(function()
+			humanoidRootPart.CFrame = CFrame.new(originalPosition)  -- Teleport back to the original position
+		end)
+
+		-- Log any errors
+		if not success then
+			warn("Teleportation back failed:", error)
+		end
+	end
+end
+
+-- Function to toggle teleportation
+local function toggleTeleportation()
+	isTeleporting = not isTeleporting
+
+	-- Change button color when teleportation is toggled on/off
+	if isTeleporting then
+		button.BackgroundColor3 = Color3.new(0.905882, 0.196078, 0.0196078) -- Red color when active
+		-- Store the original position when teleportation starts
+		originalPosition = humanoidRootPart.Position
+
+		-- Continuously teleport the player to a random position every 0.1 seconds
+		while isTeleporting do
+			teleportPlayer()  -- Teleport the player to a random position
+			wait(0)  -- Wait before teleporting again
+		end
+	else
+		button.BackgroundColor3 = Color3.new(0.0117647, 0.0117647, 0.0117647) -- Default button color when inactive
+		-- Teleport back to the original position when teleportation is stopped
+		teleportBackToOriginalPosition()
+	end
+end
+
+-- Function to update character reference on respawn
+local function onCharacterAdded(newCharacter)
+	character = newCharacter
+	humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+	originalPosition = humanoidRootPart.Position  -- Update the original position when the character respawns
+end
+
+-- Connect button click to toggle teleportation
+button.MouseButton1Click:Connect(toggleTeleportation)
+
+-- Handle character respawn
+player.CharacterAdded:Connect(onCharacterAdded)
